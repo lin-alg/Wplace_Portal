@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wplace 导航站 | 像素互助群™</title>
+    <title>Wplace 导航站 | 像素互助™</title>
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <style>
         :root {
@@ -29,7 +29,7 @@
             background: var(--bg-color);
             color: var(--text-main);
             scroll-behavior: smooth;
-            padding-bottom: 72px;
+            padding-bottom: 0;
         }
 
         html,
@@ -49,7 +49,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 2.5rem 0;
+            padding: 2.5rem 0 calc(2.5rem + 72px);
         }
 
         .tool-section {
@@ -96,6 +96,15 @@
             margin: 0 auto;
             padding: 4rem 2rem;
             width: 100%;
+        }
+
+        .nav-section .container,
+        .tool-section .container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            padding-top: 2.2rem;
         }
 
         header {
@@ -180,6 +189,40 @@
             gap: 1.5rem;
         }
 
+        .list-scroll-panel {
+            flex: 0 0 auto;
+            width: 100%;
+            height: clamp(280px, 54vh, 560px);
+            max-height: calc(100vh - 320px);
+            overflow-y: auto;
+            overflow-x: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 22px;
+            background:
+                linear-gradient(145deg, rgba(10, 19, 35, 0.56), rgba(8, 15, 28, 0.44));
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 1.25rem;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 20px 36px rgba(0, 0, 0, 0.22);
+            scrollbar-width: thin;
+            scrollbar-color: rgba(111, 195, 255, 0.55) rgba(255, 255, 255, 0.08);
+            margin-bottom: 0.75rem;
+        }
+
+        .list-scroll-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .list-scroll-panel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.07);
+            border-radius: 999px;
+        }
+
+        .list-scroll-panel::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, rgba(121, 205, 255, 0.86), rgba(56, 189, 248, 0.62));
+            border-radius: 999px;
+        }
+
         .card {
             background: var(--glass-bg);
             backdrop-filter: blur(12px);
@@ -241,14 +284,19 @@
             width: 100%;
             display: flex;
             justify-content: center;
-            padding: 0 1.5rem 0;
-            min-height: 72px;
+            padding: 0.15rem 1.5rem 0;
+            min-height: 52px;
             cursor: pointer;
             transition: opacity 0.2s ease, visibility 0.2s ease;
         }
 
         #flipNavWrap {
             margin-top: auto;
+        }
+
+        .nav-section .container,
+        .tool-section .container {
+            padding-bottom: 1rem;
         }
 
         .flip-wrap.is-hidden,
@@ -362,6 +410,7 @@
         }
 
         @keyframes elasticPulse {
+
             0%,
             100% {
                 transform: translateY(0) scale(1);
@@ -400,6 +449,24 @@
             .subsection-title {
                 font-size: 1.2rem;
             }
+
+            .list-scroll-panel {
+                height: clamp(240px, 45vh, 420px);
+                max-height: calc(100vh - 300px);
+                padding: 0.95rem;
+                border-radius: 16px;
+                margin-bottom: 0.6rem;
+            }
+
+            .nav-section .container,
+            .tool-section .container {
+                padding-top: 1.6rem;
+            }
+
+            .grid {
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                gap: 1rem;
+            }
         }
     </style>
 </head>
@@ -429,7 +496,9 @@
                 <p class="section-desc">Wplace 实用网站入口</p>
             </header>
 
-            <div class="grid" id="navGridContainer"></div>
+            <div class="list-scroll-panel" id="navListPanel">
+                <div class="grid" id="navGridContainer"></div>
+            </div>
         </div>
 
         <div class="flip-wrap is-hidden" id="flipNavWrap">
@@ -448,13 +517,15 @@
                 <p class="section-desc">下载优化创作体验的工具</p>
             </header>
 
-            <div class="grid" id="toolGridContainer"></div>
+            <div class="list-scroll-panel" id="toolListPanel">
+                <div class="grid" id="toolGridContainer"></div>
+            </div>
         </div>
     </section>
 
     <footer>
         <a href="https://github.com/lin-alg/" target="_blank" class="footer-link">
-            &copy; 2026 copyright linalg. All rights reserved.
+            &copy; 2026 copyright <strong>linalg</strong>. All rights reserved.
         </a>
     </footer>
 
@@ -538,6 +609,7 @@
         const flipToolWrap = document.getElementById('flipToolWrap');
         const activeSectionThreshold = 0.6;
         const wheelChargeThreshold = 16;
+        const panelEdgeWheelChargeThreshold = 140;
         const wheelResetDelay = 170;
 
         const sectionElements = {
@@ -678,6 +750,29 @@
         setVisibleSection('hero', { forceReveal: true });
 
         function handleWheel(event) {
+            const scrollPanel = event.target.closest('.list-scroll-panel');
+            let isPanelEdgeFlip = false;
+            if (scrollPanel) {
+                const direction = Math.sign(event.deltaY);
+                const atTop = scrollPanel.scrollTop <= 0;
+                const atBottom = scrollPanel.scrollTop + scrollPanel.clientHeight >= scrollPanel.scrollHeight - 1;
+                const canScrollDown = direction > 0 && !atBottom;
+                const canScrollUp = direction < 0 && !atTop;
+
+                if (canScrollDown || canScrollUp) {
+                    resetWheelCharge();
+                    return;
+                }
+
+                if (direction > 0 && atBottom) {
+                    isPanelEdgeFlip = true;
+                }
+
+                if (direction < 0 && atTop) {
+                    isPanelEdgeFlip = true;
+                }
+            }
+
             event.preventDefault();
 
             if (transitionTarget) {
@@ -721,7 +816,8 @@
                 }
             }
 
-            if (targetSection && wheelCharge >= wheelChargeThreshold) {
+            const currentThreshold = isPanelEdgeFlip ? panelEdgeWheelChargeThreshold : wheelChargeThreshold;
+            if (targetSection && wheelCharge >= currentThreshold) {
                 goToSection(targetSection);
             }
         }
